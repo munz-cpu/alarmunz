@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "dgSpecHash": "u8CORg/l7/c=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\문지후\\Tool\\TaskAlarm.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\문지후\\.nuget\\packages\\naudio\\3.1.0\\naudio.3.1.0.nupkg.sha512",
+    "C:\\Users\\문지후\\.nuget\\packages\\naudio.asio\\3.1.0\\naudio.asio.3.1.0.nupkg.sha512",
+    "C:\\Users\\문지후\\.nuget\\packages\\naudio.core\\3.1.0\\naudio.core.3.1.0.nupkg.sha512",
+    "C:\\Users\\문지후\\.nuget\\packages\\naudio.dmo\\3.1.0\\naudio.dmo.3.1.0.nupkg.sha512",
+    "C:\\Users\\문지후\\.nuget\\packages\\naudio.midi\\3.1.0\\naudio.midi.3.1.0.nupkg.sha512",
+    "C:\\Users\\문지후\\.nuget\\packages\\naudio.wasapi\\3.1.0\\naudio.wasapi.3.1.0.nupkg.sha512",
+    "C:\\Users\\문지후\\.nuget\\packages\\naudio.winforms\\3.1.0\\naudio.winforms.3.1.0.nupkg.sha512",
+    "C:\\Users\\문지후\\.nuget\\packages\\naudio.winmm\\3.1.0\\naudio.winmm.3.1.0.nupkg.sha512",
+    "C:\\Users\\문지후\\.nuget\\packages\\system.numerics.tensors\\9.0.0\\system.numerics.tensors.9.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}
