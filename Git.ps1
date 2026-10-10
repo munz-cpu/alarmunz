@@ -1,8 +1,9 @@
 ﻿$ErrorActionPreference = 'Stop'
 
 function Show-Help {
-    Write-Host 'Usage: tool git push <commit message> <branch name>'
+    Write-Host 'Usage: tool git push [commit message] [branch name]'
     Write-Host '       tool git pull [remote branch]'
+    Write-Host 'Push defaults to commit message "dummy" and branch "main".'
     Write-Host 'Push runs git add ., git commit -m <message>, then git push origin <branch>.'
     Write-Host 'Pull without arguments runs git reset --hard HEAD, then git pull origin main.'
     Write-Host 'For a commit message with spaces, quote it or put the branch name last.'
@@ -41,13 +42,14 @@ try {
         exit 0
     }
 
-    if ($arguments.Count -lt 2) {
-        Show-Help
-        exit 1
+    $branch = 'main'
+    $message = 'dummy'
+    if ($arguments.Count -eq 1) {
+        $message = $arguments[0].Trim()
+    } elseif ($arguments.Count -ge 2) {
+        $branch = $arguments[-1]
+        $message = ($arguments[0..($arguments.Count - 2)] -join ' ').Trim()
     }
-
-    $branch = $arguments[-1]
-    $message = ($arguments[0..($arguments.Count - 2)] -join ' ').Trim()
     if (-not $message) { throw '커밋 메시지를 입력하세요.' }
 
     & git check-ref-format --branch $branch >$null 2>&1

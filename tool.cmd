@@ -74,7 +74,7 @@ echo Tool commands:
 echo   tool alarm       Alert when a program starts, exits, or finishes loading.
 echo   tool clipboard   Show the 10 newest Windows clipboard history items.
 echo   tool colorpicker Click a screen pixel and copy its HEX color.
-echo   tool git push    Add, commit, and push the current Git branch.
+echo   tool git push [message] [branch]  Commit and push ^(defaults: dummy, main^).
 echo   tool git pull    Reset tracked changes, then pull origin main.
 echo   tool gui         Open the Tool GUI utility hub.
 echo   tool dice        Roll a die and print a number from 1 to 6.
