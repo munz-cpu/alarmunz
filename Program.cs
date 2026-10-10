@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Text;
-using System.Text.Json;
 using NAudio.Wave;
 
 internal static partial class Program
@@ -10,33 +9,64 @@ internal static partial class Program
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Unity", "Editor", "Editor.log");
 
-    private static async Task Main()
+    private static async Task<int> Main(string[] args)
     {
-        Console.WriteLine("=== Task Alarm ===");
-        Console.WriteLine("1. 프로세스 종료 알람");
-        Console.WriteLine("2. Unity 프로젝트 로딩 완료 알람");
-        Console.Write("모드 선택 (1/2): ");
-        var mode = Console.ReadLine()?.Trim();
-        if (mode is not ("1" or "2")) return;
+        if (args.Length > 0 && args[0].Equals("alarm", StringComparison.OrdinalIgnoreCase)) args = args[1..];
+        if (args.Length is < 1 or > 2 || string.IsNullOrWhiteSpace(args[0]))
+        {
+            ShowUsage();
+            return 1;
+        }
+
+        var name = Path.GetFileNameWithoutExtension(args[0].Trim());
+        var mode = args.Length == 2 ? args[1].ToLowerInvariant() : "loading";
+        if (mode is not ("on" or "off" or "loading"))
+        {
+            ShowUsage();
+            return 1;
+        }
+        if (mode == "loading" && !name.Equals("Unity", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.Error.WriteLine("loading 모드는 현재 Unity만 지원합니다. on 또는 off를 사용하세요.");
+            return 1;
+        }
 
         var soundDirectory = Path.Combine(AppContext.BaseDirectory, "sounds",
-            mode == "1" ? "default" : "unity");
+            mode == "loading" ? "unity" : "default");
         using var cancellation = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cancellation.Cancel(); };
 
         try
         {
-            if (mode == "1") await WatchProcessExit(soundDirectory, cancellation.Token);
+            if (mode == "on") await WatchProcessStart(name, soundDirectory, cancellation.Token);
+            else if (mode == "off") await WatchProcessExit(name, soundDirectory, cancellation.Token);
             else await WatchUnity(soundDirectory, cancellation.Token);
         }
         catch (OperationCanceledException) { }
+        return 0;
     }
 
-    private static async Task WatchProcessExit(string soundDirectory, CancellationToken cancellation)
+    private static void ShowUsage() => Console.WriteLine("사용법: tool alarm [프로그램 이름] [on|off|loading] (기본값: loading)");
+
+    private static async Task WatchProcessStart(string name, string soundDirectory, CancellationToken cancellation)
     {
-        Console.Write("감시할 프로세스 이름 (.exe 제외): ");
-        var name = Console.ReadLine()?.Trim();
-        if (string.IsNullOrWhiteSpace(name)) return;
+        Console.WriteLine($"{name} 프로세스 시작을 기다리는 중... (종료: Ctrl+C)");
+        while (true)
+        {
+            var processes = Process.GetProcessesByName(name);
+            if (processes.Length > 0)
+            {
+                foreach (var process in processes) process.Dispose();
+                Console.WriteLine($"{name} 프로세스가 실행되었습니다!");
+                await PlayAlarm(soundDirectory, cancellation);
+                return;
+            }
+            await Task.Delay(PollInterval, cancellation);
+        }
+    }
+
+    private static async Task WatchProcessExit(string name, string soundDirectory, CancellationToken cancellation)
+    {
         Console.WriteLine($"{name} 프로세스를 기다리는 중... (종료: Ctrl+C)");
         Process? process = null;
         while (process is null)
@@ -92,10 +122,17 @@ internal static partial class Program
             // Unity 6 on this machine redirects the startup log to <project>/Logs/Editor.log.
             // A single global redirect is unambiguous only while one unbound editor exists.
             var unbound = tracked.Values.Where(s => s.LogPath is null).ToArray();
-            if (unbound.Length == 1 && TryGetRedirectedLog(out var logPath, out var logWriteTime))
+            if (unbound.Length == 1 && File.Exists(GlobalEditorLog))
             {
                 var session = unbound[0];
-                if (logWriteTime >= session.StartTime.AddSeconds(-3) && File.Exists(logPath))
+                var logPath = GlobalEditorLog;
+                if (TryGetRedirectedLog(out var redirectedPath, out var logWriteTime)
+                    && File.Exists(redirectedPath))
+                    logPath = redirectedPath;
+                else
+                    logWriteTime = File.GetLastWriteTime(GlobalEditorLog);
+
+                if (logWriteTime >= session.StartTime.AddSeconds(-3))
                 {
                     session.LogPath = logPath;
                     Console.WriteLine($"[Unity {session.Pid}] 프로젝트 로그 연결: {logPath}");
@@ -107,16 +144,11 @@ internal static partial class Program
                 if (session.LogPath is null || session.Notified) continue;
                 try
                 {
-                    // Read from the beginning to support attaching while Unity is already loading.
-                    // A ProjectInfo record after the completion line confirms the process identity.
+                    // Read from the beginning to support attaching to an editor that is already open.
+                    // The log was matched to this editor by its startup time above.
                     foreach (var line in session.ReadNewLines())
                     {
                         if (line.StartsWith("[Project] Loading completed in ", StringComparison.Ordinal))
-                        {
-                            session.CompletionSeen = true;
-                            Console.WriteLine($"[Unity {session.Pid}] 로딩 완료 신호 확인, PID 검증 중...");
-                        }
-                        else if (session.CompletionSeen && IsMatchingProjectInfo(line, session))
                         {
                             session.Notified = true;
                             Console.WriteLine($"[Unity {session.Pid}] 프로젝트 로딩 완료: {session.LogPath}");
@@ -154,29 +186,11 @@ internal static partial class Program
         catch (UnauthorizedAccessException) { return false; }
     }
 
-    private static bool IsMatchingProjectInfo(string line, UnitySession session)
-    {
-        if (!line.StartsWith("##utp:", StringComparison.Ordinal)) return false;
-        try
-        {
-            using var document = JsonDocument.Parse(line[6..]);
-            var root = document.RootElement;
-            return root.GetProperty("type").GetString() == "ProjectInfo"
-                && root.GetProperty("processId").GetInt32() == session.Pid
-                && DateTimeOffset.FromUnixTimeMilliseconds(root.GetProperty("time").GetInt64()).LocalDateTime >= session.StartTime;
-        }
-        catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException or ArgumentOutOfRangeException)
-        {
-            return false;
-        }
-    }
-
     private sealed class UnitySession(int pid, DateTime startTime)
     {
         public int Pid { get; } = pid;
         public DateTime StartTime { get; } = startTime;
         public string? LogPath { get; set; }
-        public bool CompletionSeen { get; set; }
         public bool Notified { get; set; }
         private long _offset;
         private string _remainder = "";
@@ -184,7 +198,7 @@ internal static partial class Program
         public IEnumerable<string> ReadNewLines()
         {
             using var stream = new FileStream(LogPath!, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            if (stream.Length < _offset) { _offset = 0; _remainder = ""; CompletionSeen = false; }
+            if (stream.Length < _offset) { _offset = 0; _remainder = ""; }
             stream.Seek(_offset, SeekOrigin.Begin);
             using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
             var chunk = reader.ReadToEnd();

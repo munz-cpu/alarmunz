@@ -1,9 +1,11 @@
 ﻿$ErrorActionPreference = 'Stop'
 
 function Show-Help {
-    Write-Host 'Usage: tool git <commit message> <branch name>'
-    Write-Host 'Runs git add ., git commit -m <message>, then git push origin <branch> in the current folder.'
-    Write-Host 'For a message with spaces, quote it or put the branch name last.'
+    Write-Host 'Usage: tool git push <commit message> <branch name>'
+    Write-Host '       tool git pull [remote branch]'
+    Write-Host 'Push runs git add ., git commit -m <message>, then git push origin <branch>.'
+    Write-Host 'Pull without arguments runs git reset --hard HEAD, then git pull origin main.'
+    Write-Host 'For a commit message with spaces, quote it or put the branch name last.'
 }
 
 try {
@@ -13,6 +15,32 @@ try {
         Show-Help
         exit 0
     }
+    $command = $arguments[0]
+    $arguments = @($arguments | Select-Object -Skip 1)
+    if ($command -notin @('push', 'pull')) {
+        Show-Help
+        exit 1
+    }
+
+    $inside = & git rev-parse --is-inside-work-tree 2>$null
+    if ($LASTEXITCODE -ne 0 -or $inside -ne 'true') { throw '현재 폴더가 Git 저장소 안에 있지 않습니다.' }
+
+    if ($command -eq 'pull') {
+        if ($arguments.Count -eq 0) {
+            Write-Host 'git reset --hard HEAD'
+            & git reset --hard HEAD
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+            Write-Host 'git pull origin main'
+            & git pull origin main
+        } else {
+            Write-Host ('git pull {0}' -f ($arguments -join ' '))
+            & git pull @arguments
+        }
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        exit 0
+    }
+
     if ($arguments.Count -lt 2) {
         Show-Help
         exit 1
@@ -21,9 +49,6 @@ try {
     $branch = $arguments[-1]
     $message = ($arguments[0..($arguments.Count - 2)] -join ' ').Trim()
     if (-not $message) { throw '커밋 메시지를 입력하세요.' }
-
-    $inside = & git rev-parse --is-inside-work-tree 2>$null
-    if ($LASTEXITCODE -ne 0 -or $inside -ne 'true') { throw '현재 폴더가 Git 저장소 안에 있지 않습니다.' }
 
     & git check-ref-format --branch $branch >$null 2>&1
     if ($LASTEXITCODE -ne 0) { throw ('유효하지 않은 브랜치 이름: {0}' -f $branch) }
