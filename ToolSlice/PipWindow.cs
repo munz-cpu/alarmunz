@@ -61,6 +61,10 @@ public sealed class PipWindow : Window
         close.Click += (_, _) => Close();
         DockPanel.SetDock(close, Dock.Right);
         bar.Children.Add(close);
+        var restore = new Button { Content = "원본 복원", Width = 75, ToolTip = "최소화하거나 숨긴 원본 창을 다시 표시", Margin = new Thickness(2) };
+        restore.Click += (_, _) => WindowCatalog.Restore(_target.Handle);
+        DockPanel.SetDock(restore, Dock.Right);
+        bar.Children.Add(restore);
         var name = new TextBlock { Text = target.Title, Foreground = Brushes.White, FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0) };
         bar.Children.Add(name);
         bar.MouseLeftButtonDown += (_, e) => { if (e.OriginalSource is TextBlock or DockPanel) DragMove(); };
@@ -126,9 +130,11 @@ public sealed class PipWindow : Window
                 _frameHeight = height;
                 _lastFrame = Environment.TickCount64;
                 _blackFrames = LooksBlack(pixels) ? _blackFrames + 1 : 0;
-                _status.Text = _blackFrames >= 5
-                    ? "검은 화면 · 보호 콘텐츠 또는 실제 검은 화면일 수 있습니다"
-                    : _shownInputWarning ? "영상 정상 · 이 앱은 전달된 입력을 받지 않을 수 있습니다" : "영상 정상 · 클릭/드래그는 놓을 때 원본에 전달됩니다";
+                _status.Text = WindowCatalog.IsMinimized(_target.Handle) || WindowCatalog.IsHidden(_target.Handle)
+                    ? "원본 창이 숨겨졌습니다 · 위의 원본 복원을 누르세요"
+                    : _blackFrames >= 5
+                        ? "검은 화면 · 보호 콘텐츠 또는 실제 검은 화면일 수 있습니다"
+                        : _shownInputWarning ? "영상 정상 · 이 앱은 전달된 입력을 받지 않을 수 있습니다" : "영상 정상 · 클릭/드래그는 놓을 때 원본에 전달됩니다";
             }
             catch (Exception ex) { _status.Text = $"프레임 표시 실패: {ex.Message}"; }
             finally { Interlocked.Exchange(ref _frameQueued, 0); }
@@ -138,6 +144,11 @@ public sealed class PipWindow : Window
     private void CheckHealth()
     {
         if (!WindowCatalog.IsAlive(_target.Handle)) { Close(); return; }
+        if (WindowCatalog.IsMinimized(_target.Handle) || WindowCatalog.IsHidden(_target.Handle))
+        {
+            _status.Text = "원본 창이 숨겨졌습니다 · 위의 원본 복원을 누르세요";
+            return;
+        }
         if (Environment.TickCount64 - _lastFrame > 2500)
             _status.Text = "영상이 오지 않습니다 · 최소화 또는 캡처 보호 상태를 확인하세요";
     }

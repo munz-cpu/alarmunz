@@ -72,6 +72,9 @@ public sealed class ToolHubWindow : Window
         AddSection(sections, "빠른 도구", Row(
             ActionButton("클립보드 기록", async () => await RunAsync(() => _commands.StartPowerShell("Clipboard.ps1"))),
             ActionButton("주사위 굴리기", () => Log($"주사위: {Random.Shared.Next(1, 7)}"))));
+        AddSection(sections, "slipperyWindow", Row(
+            ActionButton("slipperyWindow 시작", async () => await RunAsync(() => _commands.StartPowerShell("SlipperyWindow.ps1"))),
+            new TextBlock { Text = "창 관성 설정은 실행 후 시스템 트레이에서 열 수 있습니다.", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 4, 0, 4) }));
         _alarmMode.ItemsSource = new[] { "on", "off", "loading" };
         _alarmMode.SelectedIndex = 0;
         AddSection(sections, "프로세스 알람", Row(_alarmName, _alarmMode,

@@ -2,3 +2,6 @@
 /obj/Release/
 /ToolSlice/bin/
 /ToolSlice/obj/
+/ToolInertia/bin/
+/ToolInertia/obj/
+/ToolInertia/*.csproj.user

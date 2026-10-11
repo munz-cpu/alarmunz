@@ -3,14 +3,20 @@ setlocal
 set "HELP_EXIT=0"
 if "%~1"=="" goto help
 if /i "%~1"=="help" goto help
+if /i "%~1"=="h" goto help
 if /i "%~1"=="--help" goto help
 if /i "%~1"=="-h" goto help
 if /i "%~1"=="alarm" goto alarm
+if /i "%~1"=="a" goto alarm
 if /i "%~1"=="clipboard" goto clipboard
+if /i "%~1"=="cb" goto clipboard
 if /i "%~1"=="colorpicker" goto colorpicker
+if /i "%~1"=="cp" goto colorpicker
 if /i "%~1"=="git" goto git
 if /i "%~1"=="gui" goto gui
 if /i "%~1"=="dice" goto dice
+if /i "%~1"=="slipperyWindow" goto slipperyWindow
+if /i "%~1"=="sw" goto slipperyWindow
 
 echo Unknown command: %~1
 echo.
@@ -69,16 +75,28 @@ if not "%~2"=="" (
 powershell.exe -NoProfile -Command "Get-Random -Minimum 1 -Maximum 7"
 exit /b %errorlevel%
 
+:slipperyWindow
+if /i "%~2"=="help" goto slipperyWindow_help
+if /i "%~2"=="--help" goto slipperyWindow_help
+if /i "%~2"=="-h" goto slipperyWindow_help
+if not "%~2"=="" (
+    echo Usage: tool slipperyWindow
+    exit /b 1
+)
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0SlipperyWindow.ps1"
+exit /b %errorlevel%
+
 :help
 echo Tool commands:
-echo   tool alarm       Alert when a program starts, exits, or finishes loading.
-echo   tool clipboard   Show the 10 newest Windows clipboard history items.
-echo   tool colorpicker Click a screen pixel and copy its HEX color.
+echo   tool alarm ^(a^)        Alert when a program starts, exits, or finishes loading.
+echo   tool clipboard ^(cb^)  Show the 10 newest Windows clipboard history items.
+echo   tool colorpicker ^(cp^) Click a screen pixel and copy its HEX color.
 echo   tool git push [message] [branch]  Commit and push ^(defaults: dummy, main^).
 echo   tool git pull    Reset tracked changes, then pull origin main.
 echo   tool gui         Open the Tool GUI utility hub.
 echo   tool dice        Roll a die and print a number from 1 to 6.
-echo   tool help        Show this help.
+echo   tool slipperyWindow ^(sw^) Start window inertia in the system tray.
+echo   tool help ^(h^)    Show this help.
 echo   tool [tool-name] help  Show details for a tool.
 exit /b %HELP_EXIT%
 
@@ -88,7 +106,7 @@ echo Clipboard history must be enabled in Windows Settings.
 exit /b 0
 
 :alarm_help
-echo Usage: tool alarm [program name] [on^|off^|loading]
+echo Usage: tool alarm ^(a^) [program name] [on^|off^|loading]
 echo   on       Alert when the program starts.
 echo   off      Alert when the program exits.
 echo   loading  Alert when Unity finishes loading ^(default^).
@@ -104,4 +122,9 @@ exit /b 0
 :gui_help
 echo Usage: tool gui
 echo Opens the Tool utility hub. Create a window PIP or select part of a window.
+exit /b 0
+
+:slipperyWindow_help
+echo Usage: tool slipperyWindow ^(sw^)
+echo Starts the window inertia utility. Open its settings from the system tray.
 exit /b 0

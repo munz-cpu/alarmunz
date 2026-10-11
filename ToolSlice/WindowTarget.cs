@@ -66,6 +66,12 @@ public static class WindowCatalog
     }
 
     public static bool IsAlive(IntPtr hwnd) => IsWindow(hwnd);
+    public static bool IsMinimized(IntPtr hwnd) => IsWindow(hwnd) && IsIconic(hwnd);
+    public static bool IsHidden(IntPtr hwnd) => IsWindow(hwnd) && !IsWindowVisible(hwnd);
+    public static void Restore(IntPtr hwnd)
+    {
+        if (IsWindow(hwnd)) ShowWindowAsync(hwnd, IsIconic(hwnd) ? 9 : 5);
+    }
 
     [StructLayout(LayoutKind.Sequential)] private struct Rect { public int Left, Top, Right, Bottom; }
     private delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
@@ -75,6 +81,7 @@ public static class WindowCatalog
     [DllImport("user32.dll")] private static extern bool IsWindow(IntPtr hwnd);
     [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hwnd);
     [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr hwnd);
+    [DllImport("user32.dll")] private static extern bool ShowWindowAsync(IntPtr hwnd, int command);
     [DllImport("user32.dll")] private static extern int GetWindowTextLength(IntPtr hwnd);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetWindowText(IntPtr hwnd, StringBuilder text, int maxCount);
     [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hwnd, out Rect rect);
