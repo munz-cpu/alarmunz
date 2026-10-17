@@ -131,7 +131,7 @@ echo   tool gitignore [name]  Add a pattern to this repo's .gitignore.
 echo   tool gui         Open the Tool GUI utility hub.
 echo   tool dice        Roll a die and print a number from 1 to 6.
 echo   tool decibel     Show calibrated microphone sound level in dB SPL.
-echo   tool slipperyWindow ^(sw^) Start window inertia in the system tray.
+echo   tool slipperyWindow ^(sw^) Toggle window inertia in the system tray.
 echo   tool ganzi       Toggle the animated terminal display.
 echo   tool help ^(h^)    Show this help.
 echo   tool [tool-name] help  Show details for a tool.
@@ -185,5 +185,6 @@ exit /b 1
 
 :slipperyWindow_help
 echo Usage: tool slipperyWindow ^(sw^)
-echo Starts the window inertia utility. Open its settings from the system tray.
+echo Starts the window inertia utility, or stops it if already running.
+echo Open its settings from the system tray while running.
 exit /b 0
