@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TaskAlarm")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+aba4fd35685aab5b197bfd0ea2a3d6e46ef007a9")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+09a18a51db5b6ff31f4cb43ae3b7de277566b9a4")]
 [assembly: System.Reflection.AssemblyProductAttribute("TaskAlarm")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TaskAlarm")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

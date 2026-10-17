@@ -55,8 +55,8 @@ internal sealed class InertiaEngine : IDisposable
                 var constrained = MonitorManager.Constrain(rect, targetX, targetY);
                 motion.X = constrained.X;
                 motion.Y = constrained.Y;
-                motion.Vx = constrained.StopX ? 0 : motion.Vx * decay;
-                motion.Vy = constrained.StopY ? 0 : motion.Vy * decay;
+                motion.Vx = constrained.BounceX ? -motion.Vx * decay * .45 : motion.Vx * decay;
+                motion.Vy = constrained.BounceY ? -motion.Vy * decay * .45 : motion.Vy * decay;
                 if (!WindowMover.Move(motion.Identity, (int)Math.Round(motion.X), (int)Math.Round(motion.Y)) ||
                     Math.Sqrt(motion.Vx * motion.Vx + motion.Vy * motion.Vy) < 20)
                     _motions.Remove(hwnd);

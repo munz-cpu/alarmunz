@@ -11,6 +11,8 @@ internal static partial class Program
 
     private static async Task<int> Main(string[] args)
     {
+        if (args.Length > 0 && args[0].Equals("decibel", StringComparison.OrdinalIgnoreCase))
+            return await RunDecibel(args[1..]);
         if (args.Length > 0 && (args[0].Equals("alarm", StringComparison.OrdinalIgnoreCase)
             || args[0].Equals("a", StringComparison.OrdinalIgnoreCase))) args = args[1..];
         if (args.Length is < 1 or > 2 || string.IsNullOrWhiteSpace(args[0]))

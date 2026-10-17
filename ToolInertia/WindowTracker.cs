@@ -9,6 +9,7 @@ internal sealed class WindowTracker : IDisposable
         internal required WindowIdentity Identity;
         internal required Native.Rect Initial;
         internal readonly List<Sample> Samples = [];
+        internal int LastX, LastY;
         internal bool Resized;
         internal long ReleaseStamp;
     }
@@ -70,7 +71,7 @@ internal sealed class WindowTracker : IDisposable
         if (!_settings().Enabled || Native.GetAsyncKeyState(Native.VkLButton) >= 0 || !WindowMover.Eligible(hwnd)) return;
         var id = WindowMover.Identify(hwnd);
         if (id is null || !Native.GetWindowRect(hwnd, out var rect)) return;
-        var drag = new Drag { Identity = id.Value, Initial = rect };
+        var drag = new Drag { Identity = id.Value, Initial = rect, LastX = rect.Left, LastY = rect.Top };
         drag.Samples.Add(new(Stopwatch.GetTimestamp(), rect.Left, rect.Top));
         _drags[hwnd] = drag;
         _sampleTimer.Start();
@@ -84,6 +85,26 @@ internal sealed class WindowTracker : IDisposable
             if (!WindowMover.Same(drag.Identity) || !Native.GetWindowRect(hwnd, out var rect))
             { _drags.Remove(hwnd); continue; }
             if (rect.Width != drag.Initial.Width || rect.Height != drag.Initial.Height) drag.Resized = true;
+            if (!drag.Resized && _settings().Enabled)
+            {
+                var previous = rect;
+                previous.Right += drag.LastX - previous.Left;
+                previous.Bottom += drag.LastY - previous.Top;
+                previous.Left = drag.LastX;
+                previous.Top = drag.LastY;
+                var bounded = MonitorManager.Constrain(previous, rect.Left, rect.Top);
+                var x = (int)Math.Round(bounded.X);
+                var y = (int)Math.Round(bounded.Y);
+                if ((x != rect.Left || y != rect.Top) && WindowMover.Move(drag.Identity, x, y))
+                {
+                    rect.Right += x - rect.Left;
+                    rect.Bottom += y - rect.Top;
+                    rect.Left = x;
+                    rect.Top = y;
+                }
+                drag.LastX = rect.Left;
+                drag.LastY = rect.Top;
+            }
             if (drag.Samples.Count == 0 || drag.Samples[^1].X != rect.Left || drag.Samples[^1].Y != rect.Top)
                 drag.Samples.Add(new(now, rect.Left, rect.Top));
             drag.Samples.RemoveAll(s => (now - s.Stamp) / (double)Stopwatch.Frequency > .25);
@@ -96,6 +117,18 @@ internal sealed class WindowTracker : IDisposable
         if (!_drags.Remove(hwnd, out var drag)) return;
         if (_drags.Count == 0) _sampleTimer.Stop();
         var now = Stopwatch.GetTimestamp();
+        if (_settings().Enabled && !drag.Resized && WindowMover.Same(drag.Identity) &&
+            Native.GetWindowRect(hwnd, out var finalRect) &&
+            finalRect.Width == drag.Initial.Width && finalRect.Height == drag.Initial.Height)
+        {
+            var previous = finalRect;
+            previous.Right += drag.LastX - previous.Left;
+            previous.Bottom += drag.LastY - previous.Top;
+            previous.Left = drag.LastX;
+            previous.Top = drag.LastY;
+            var bounded = MonitorManager.Constrain(previous, finalRect.Left, finalRect.Top);
+            WindowMover.Move(drag.Identity, (int)Math.Round(bounded.X), (int)Math.Round(bounded.Y));
+        }
         // MoveEnd is sent after Windows has completed its own drag loop.
         if (!_settings().Enabled || drag.Resized || drag.ReleaseStamp == 0 ||
             (now - drag.ReleaseStamp) / (double)Stopwatch.Frequency > .35 ||
